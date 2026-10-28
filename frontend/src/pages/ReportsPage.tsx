@@ -12,20 +12,18 @@ import {
   Compass,
   Sparkles,
 } from "lucide-react";
-import { MONTH_NAMES, formatDate } from "@/lib/formatters";
+
+
+
+import { formatDate, MONTH_NAMES } from "@/lib/formatters";
 import { CurrencyDisplay } from "@/components/common/CurrencyDisplay";
-import { MonthlyTrackerResponse, YearlyReport, SavingsSummary } from "@/types";
 import { api } from "@/lib/api";
 import { Topbar } from "@/components/layout/Topbar";
+import { MonthlyTrackerResponse, SavingsSummary, YearlyReport } from "@/types";
+import { getAdjustedOverallSavings, getExecutedPlansForPeriod, getExecutedPlansForYear, onExecutedBucketPlansChange } from "@/lib/bucketExecution";
+import { ExcelSheet, exportToExcel } from "@/lib/excelExport";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { exportToExcel, ExcelSheet } from "@/lib/excelExport";
-import {
-  getAdjustedOverallSavings,
-  getExecutedPlansForPeriod,
-  getExecutedPlansForYear,
-  onExecutedBucketPlansChange,
-} from "@/lib/bucketExecution";
 
 export const ReportsPage: React.FC = () => {
   const [reportType, setReportType] = useState<"monthly" | "yearly">("monthly");

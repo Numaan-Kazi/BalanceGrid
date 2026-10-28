@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { User } from '../types';
@@ -62,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         api.setToken(data.token);
       }
       setUser(data.user);
+      toast.success(`Welcome back, ${data.user.name || data.user.username}!`);
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         api.setToken(res.token);
       }
       setUser(res.user);
+      toast.success("Account registered successfully!");
     } finally {
       setIsLoading(false);
     }

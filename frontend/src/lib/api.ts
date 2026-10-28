@@ -64,10 +64,16 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      let errorMessage = 'An unexpected error occurred';
+      let errorMessage = 'An unexpected error occurred. Please try again.';
       try {
         const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
+        if (errorData.details && Array.isArray(errorData.details) && errorData.details.length > 0) {
+          errorMessage = errorData.details.map((d: any) => d.message || d.field).join('. ');
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
       } catch {
         errorMessage = response.statusText || errorMessage;
       }

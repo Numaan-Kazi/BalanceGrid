@@ -1,8 +1,8 @@
+import { toast } from 'sonner';
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
-  DollarSign,
   Plus,
   Lock,
   Unlock,
@@ -177,6 +177,7 @@ export const MonthlyTrackerPage: React.FC = () => {
     onSuccess: () => {
       invalidateTracker();
       setIsBudgetModalOpen(false);
+      toast.success('Monthly budget updated successfully.');
     },
   });
 
@@ -185,17 +186,36 @@ export const MonthlyTrackerPage: React.FC = () => {
       api.put(`/monthly/starting-balance/${trackerData!.period.id}`, {
         startingBalance,
       }),
-    onSuccess: invalidateTracker,
+    onSuccess: () => {
+      invalidateTracker();
+      toast.success('Starting balance updated successfully.');
+    },
   });
 
   const closeMonthMutation = useMutation({
     mutationFn: () => api.post(`/monthly/close/${trackerData!.period.id}`, {}),
-    onSuccess: invalidateTracker,
+    onSuccess: () => {
+      relockMonth(selectedYear, selectedMonth);
+      invalidateTracker();
+      toast.success('Month finalized and closed successfully.');
+    },
+  });
+
+  const unlockMonthMutation = useMutation({
+    mutationFn: () => api.post(`/monthly/unlock/${trackerData!.period.id}`, {}),
+    onSuccess: () => {
+      unlockMonth(selectedYear, selectedMonth);
+      invalidateTracker();
+      toast.success('Month unlocked successfully. Editing is now active.');
+    },
   });
 
   const incomeMutation = useMutation({
     mutationFn: (data: any) => api.post("/incomes", data),
-    onSuccess: invalidateTracker,
+    onSuccess: () => {
+      invalidateTracker();
+      toast.success('Income recorded successfully.');
+    },
   });
 
   const handleUpdateSummary = async (
@@ -297,10 +317,17 @@ export const MonthlyTrackerPage: React.FC = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => unlockMonth(selectedYear, selectedMonth)}
+                  disabled={unlockMonthMutation.isPending}
+                  onClick={async () => {
+                    await unlockMonthMutation.mutateAsync();
+                  }}
                   className="bg-slate-800 hover:bg-slate-700 text-white border-slate-700 text-xs shrink-0 self-start sm:self-auto"
                 >
-                  <Unlock className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+                  {unlockMonthMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-amber-400" />
+                  ) : (
+                    <Unlock className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+                  )}
                   Unlock Month
                 </Button>
               </div>
@@ -332,7 +359,16 @@ export const MonthlyTrackerPage: React.FC = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => relockMonth(selectedYear, selectedMonth)}
+                  onClick={async () => {
+                    relockMonth(selectedYear, selectedMonth);
+                    try {
+                      await api.post(`/monthly/close/${trackerData!.period.id}`, {});
+                    } catch {
+                      // ignore if already closed
+                    }
+                    invalidateTracker();
+                    toast.success('Month re-locked successfully.');
+                  }}
                   className="bg-white hover:bg-amber-100 text-amber-900 border-amber-300 text-xs shrink-0 self-start sm:self-auto"
                 >
                   <Lock className="w-3.5 h-3.5 mr-1.5 text-amber-700" />

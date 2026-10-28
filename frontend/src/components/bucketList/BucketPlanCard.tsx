@@ -9,6 +9,7 @@ import {
   PieChart,
   Sparkles,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { BucketPlan } from '../../types';
 import { Card, CardContent } from '../ui/Card';
@@ -27,7 +28,6 @@ interface BucketPlanCardProps {
   onDeleteExpense: (expenseId: string) => void;
   onUnlinkExpense: (expenseId: string) => void;
   onExecute: (plan: BucketPlan) => void;
-  onUnexecute?: (planId: string) => void;
 }
 
 export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
@@ -40,39 +40,32 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
   onDeleteExpense,
   onUnlinkExpense,
   onExecute,
-  onUnexecute,
 }) => {
-  const isOverBudget = plan.isOverBudget ?? (plan.remainingBudget < 0);
+  const isCompleted = plan.status === 'COMPLETED' || isExecuted;
+  const isOverBudget = !isCompleted && (plan.isOverBudget ?? plan.remainingBudget < 0);
   const excessAmount = plan.excessAmount ?? (isOverBudget ? Math.abs(plan.remainingBudget) : 0);
   const executionAmount = plan.totalSpent > 0 ? plan.totalSpent : plan.budget;
 
   const getStatusBadge = () => {
-    if (isExecuted) {
+    if (isCompleted) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
-          <Sparkles className="w-3 h-3 text-emerald-600" />
-          Executed
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          Completed
         </span>
       );
     }
-    switch (plan.status) {
-      case 'COMPLETED':
-        return <Badge variant="success">Completed</Badge>;
-      case 'IN_PROGRESS':
-        return <Badge variant="brand">In Progress</Badge>;
-      default:
-        return <Badge variant="neutral">Planned</Badge>;
-    }
+    return <Badge variant="brand">In Progress</Badge>;
   };
 
   return (
     <Card
-      className={`hover:border-brand-300 transition-all ${
-        isExecuted
-          ? 'border-emerald-300 bg-gradient-to-b from-emerald-50/20 to-white'
+      className={`transition-all ${
+        isCompleted
+          ? 'border-emerald-300 bg-gradient-to-b from-emerald-50/20 via-white to-white shadow-2xs'
           : isOverBudget
-          ? 'border-rose-300'
-          : ''
+          ? 'border-rose-300 hover:border-rose-400'
+          : 'hover:border-brand-300'
       }`}
     >
       <CardContent className="p-5 space-y-4">
@@ -81,7 +74,7 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
           <div className="flex items-center gap-2.5">
             <div
               className={`p-2 rounded-lg ${
-                isExecuted
+                isCompleted
                   ? 'bg-emerald-100 text-emerald-700'
                   : isOverBudget
                   ? 'bg-rose-50 text-rose-600'
@@ -104,25 +97,30 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onEdit(plan)}
-              className="p-1.5 text-content-secondary hover:text-brand-600 rounded-md hover:bg-slate-100"
-              title="Edit Plan"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onDelete(plan.id)}
-              className="p-1.5 text-content-secondary hover:text-rose-600 rounded-md hover:bg-rose-50"
-              title="Delete Plan"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          {/* Action buttons (Disabled & hidden once completed/locked down) */}
+          {!isCompleted && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onEdit(plan)}
+                className="p-1.5 text-content-secondary hover:text-brand-600 rounded-md hover:bg-slate-100 transition-colors"
+                title="Edit Plan"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(plan.id)}
+                className="p-1.5 text-content-secondary hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors"
+                title="Delete Plan"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Over Budget State & Explicit Alert Card */}
+        {/* Over Budget Explicit Alert Card (active only before execution) */}
         {isOverBudget && (
           <div className="p-3 rounded-lg bg-rose-50 border-2 border-rose-300 text-rose-900 shadow-2xs space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-xs text-rose-700">
@@ -144,7 +142,7 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
             <span className="text-content-secondary">Spent: ₹{plan.totalSpent.toFixed(2)}</span>
             <span
               className={`font-semibold ${
-                isExecuted ? 'text-emerald-700' : isOverBudget ? 'text-rose-600' : 'text-content-primary'
+                isCompleted ? 'text-emerald-700' : isOverBudget ? 'text-rose-600' : 'text-content-primary'
               }`}
             >
               {plan.percentageSpent}% utilized
@@ -153,7 +151,7 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
           <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
             <div
               className={`h-full transition-all duration-500 rounded-full ${
-                isExecuted ? 'bg-emerald-600' : isOverBudget ? 'bg-rose-500' : 'bg-brand-600'
+                isCompleted ? 'bg-emerald-600' : isOverBudget ? 'bg-rose-500' : 'bg-brand-600'
               }`}
               style={{ width: `${Math.min(plan.percentageSpent, 100)}%` }}
             />
@@ -163,11 +161,11 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
         {/* Budget Figures */}
         <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-surface-muted border border-surface-border text-xs">
           <div>
-            <span className="text-content-secondary block text-[11px]">Planned Budget</span>
+            <span className="text-content-secondary block text-[11px]">Allocated Budget</span>
             <CurrencyDisplay amount={plan.budget} size="sm" />
           </div>
           <div>
-            <span className="text-content-secondary block text-[11px]">Remaining Budget</span>
+            <span className="text-content-secondary block text-[11px]">Remaining in Budget Pool</span>
             <CurrencyDisplay
               amount={plan.remainingBudget}
               size="sm"
@@ -199,29 +197,22 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
         )}
 
         {/* Plan Execution State / Action Button */}
-        {isExecuted ? (
-          <div className="p-3 rounded-lg bg-emerald-50/90 border border-emerald-200 text-emerald-900 flex items-center justify-between text-xs shadow-2xs">
+        {isCompleted ? (
+          <div className="p-3 rounded-lg bg-emerald-50/90 border border-emerald-300 text-emerald-950 flex items-center justify-between text-xs shadow-xs">
             <div className="flex items-center gap-2">
-              <div className="p-1 bg-emerald-200 text-emerald-800 rounded">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="p-1.5 bg-emerald-200 text-emerald-800 rounded-md shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
               </div>
               <div>
-                <span className="font-bold text-emerald-950 block">Plan Finalized & Executed</span>
+                <span className="font-bold text-emerald-950 block">Plan Finalized &amp; Executed</span>
                 <span className="text-[11px] text-emerald-700">
-                  ₹{executionAmount.toLocaleString()} deducted from Overall Savings
+                  ₹{executionAmount.toLocaleString()} permanently deducted from Overall Savings
                 </span>
               </div>
             </div>
-            {onUnexecute && (
-              <button
-                type="button"
-                onClick={() => onUnexecute(plan.id)}
-                className="text-[11px] text-slate-500 hover:text-rose-600 underline font-medium ml-2"
-                title="Revert execution back to planned state"
-              >
-                Revert
-              </button>
-            )}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-emerald-200/60 text-emerald-800 font-semibold shrink-0">
+              <Lock className="w-2.5 h-2.5" /> Locked
+            </span>
           </div>
         ) : (
           <Button
@@ -235,16 +226,18 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
           </Button>
         )}
 
-        {/* Add Expense Action Button */}
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full text-xs font-medium"
-          onClick={() => onAddExpense(plan)}
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add Expense to Plan
-        </Button>
+        {/* Add Expense Action Button (Hidden once completed/locked down) */}
+        {!isCompleted && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full text-xs font-medium"
+            onClick={() => onAddExpense(plan)}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Add Expense to Plan
+          </Button>
+        )}
 
         {/* Linked actual expenses */}
         <div className="space-y-2 pt-2 border-t border-surface-border">
@@ -253,13 +246,13 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
               Linked Expenses ({plan.expenses.length})
             </span>
             <span className="text-[10px] text-content-muted">
-              Deducts from plan budget only
+              Deducts from plan budget pool only
             </span>
           </div>
 
           {plan.expenses.length === 0 ? (
             <p className="text-[11px] text-content-muted italic">
-              No transactions recorded yet. Click &quot;Add Expense to Plan&quot; to log actual spending.
+              No transactions recorded yet. Click &quot;Add Expense to Plan&quot; to log expenses against this plan&apos;s budget.
             </p>
           ) : (
             <div className="divide-y divide-surface-border max-h-36 overflow-y-auto border border-surface-border rounded-md">
@@ -278,27 +271,34 @@ export const BucketPlanCard: React.FC<BucketPlanCardProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CurrencyDisplay amount={e.netAmount} size="sm" />
-                    <button
-                      onClick={() => onEditExpense(plan, e)}
-                      className="p-1 text-content-muted hover:text-brand-600 rounded hover:bg-brand-50"
-                      title="Edit expense"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => onUnlinkExpense(e.id)}
-                      className="p-1 text-content-muted hover:text-amber-600 rounded hover:bg-amber-50"
-                      title="Unlink from plan"
-                    >
-                      <Unlink className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteExpense(e.id)}
-                      className="p-1 text-content-muted hover:text-rose-600 rounded hover:bg-rose-50"
-                      title="Delete expense"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {!isCompleted && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onEditExpense(plan, e)}
+                          className="p-1 text-content-muted hover:text-brand-600 rounded hover:bg-brand-50"
+                          title="Edit expense"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onUnlinkExpense(e.id)}
+                          className="p-1 text-content-muted hover:text-amber-600 rounded hover:bg-amber-50"
+                          title="Unlink from plan"
+                        >
+                          <Unlink className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteExpense(e.id)}
+                          className="p-1 text-content-muted hover:text-rose-600 rounded hover:bg-rose-50"
+                          title="Delete expense"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

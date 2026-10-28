@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -18,6 +19,7 @@ import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { AdditionalSavingsModal, AdditionalSavingsFormData } from '@/components/accounts/AdditionalSavingsModal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { formatDate } from '@/lib/formatters';
+import { getAdjustedOverallSavings, onExecutedBucketPlansChange } from '@/lib/bucketExecution';
 
 export const AccountsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -26,6 +28,13 @@ export const AccountsPage: React.FC = () => {
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
   const [editingSavings, setEditingSavings] = useState<AdditionalSavings | null>(null);
   const [deletingSavingsId, setDeletingSavingsId] = useState<string | null>(null);
+  const [, setExecutedTick] = useState(0);
+
+  React.useEffect(() => {
+    return onExecutedBucketPlansChange(() => {
+      setExecutedTick(t => t + 1);
+    });
+  }, []);
 
   const { data: savingsSummary, isLoading: isLoadingSavings } = useQuery<SavingsSummary>({
     queryKey: ['savingsSummary'],
@@ -41,18 +50,27 @@ export const AccountsPage: React.FC = () => {
 
   const createSavingsMutation = useMutation({
     mutationFn: (data: any) => api.post('/accounts/additional-savings', data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Additional savings created successfully');
+    },
   });
 
   const updateSavingsMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       api.patch(`/accounts/additional-savings/${id}`, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Additional savings updated successfully');
+    },
   });
 
   const deleteSavingsMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/accounts/additional-savings/${id}`),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Additional savings deleted successfully');
+    },
   });
 
   const additionalSavingsList = savingsSummary?.additionalSavings || [];
@@ -85,7 +103,7 @@ export const AccountsPage: React.FC = () => {
               <Sparkles className="w-3.5 h-3.5 text-brand-600" /> Overall Savings
             </span>
             <CurrencyDisplay
-              amount={savingsSummary?.overallTotalSavings || 0}
+              amount={getAdjustedOverallSavings(savingsSummary?.overallTotalSavings || 0)}
               size="2xl"
               className="mt-1 font-bold text-brand-700"
             />

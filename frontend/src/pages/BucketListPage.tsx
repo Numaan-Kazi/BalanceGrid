@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { Compass, Plus, Loader2 } from 'lucide-react';
-import { BucketPlan, Category, Account } from '@/types';
+import { BucketPlan, Category } from '@/types';
 import { api } from '@/lib/api';
 import {
   isPlanExecuted,
   executeBucketPlan,
-  unexecuteBucketPlan,
   onExecutedBucketPlansChange,
 } from '@/lib/bucketExecution';
 import { Topbar } from '@/components/layout/Topbar';
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { EmptyState } from '@/components/common/EmptyState';
 import { BucketPlanCard } from '@/components/bucketList/BucketPlanCard';
-import { BucketPlanModal } from '@/components/bucketList/BucketPlanModal';
+import { BucketPlanModal, BucketPlanFormData } from '@/components/bucketList/BucketPlanModal';
 import { BucketExpenseModal, BucketExpenseFormData } from '@/components/bucketList/BucketExpenseModal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
@@ -34,7 +34,6 @@ export const BucketListPage: React.FC = () => {
     description: string | null;
     date: string;
     categoryId?: string;
-    accountId?: string;
   } | null>(null);
   const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
   const [executingPlan, setExecutingPlan] = useState<BucketPlan | null>(null);
@@ -56,11 +55,6 @@ export const BucketListPage: React.FC = () => {
     queryFn: () => api.get('/categories'),
   });
 
-  const { data: accountsData } = useQuery<{ accounts: Account[] }>({
-    queryKey: ['accounts'],
-    queryFn: () => api.get('/accounts'),
-  });
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['bucketPlans'] });
     queryClient.invalidateQueries({ queryKey: ['monthlyTracker'] });
@@ -73,40 +67,60 @@ export const BucketListPage: React.FC = () => {
 
   const createPlanMutation = useMutation({
     mutationFn: (newPlan: any) => api.post('/bucket-plans', newPlan),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Bucket plan created successfully.');
+    },
   });
 
   const updatePlanMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       api.patch(`/bucket-plans/${id}`, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+    },
   });
 
   const deletePlanMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/bucket-plans/${id}`),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Bucket plan deleted successfully.');
+    },
   });
 
   const unlinkExpenseMutation = useMutation({
     mutationFn: (expenseId: string) =>
       api.post('/bucket-plans/link-expense', { expenseId, bucketPlanId: null }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Expense unlinked from bucket plan.');
+    },
   });
 
   const addExpenseMutation = useMutation({
     mutationFn: (data: any) => api.post('/bucket-plans/expense', data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Expense added to bucket plan.');
+    },
   });
 
   const updateExpenseMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       api.patch(`/expenses/detailed/${id}`, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Expense updated successfully.');
+    },
   });
 
   const deleteExpenseMutation = useMutation({
     mutationFn: (expenseId: string) => api.delete(`/expenses/detailed/${expenseId}`),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Expense deleted successfully.');
+    },
   });
 
   const plans = data?.plans || [];
@@ -135,7 +149,7 @@ export const BucketListPage: React.FC = () => {
         }
       />
 
-      <div className="px-4 sm:px-8 space-y-6 w-full">
+      <div className="px-4 sm:px-8 space-y-6 max-w-7xl mx-auto">
         {/* Summary Card */}
         <div className="bg-white rounded-lg border border-surface-border p-5 shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-surface-border">
           <div>
@@ -208,17 +222,13 @@ export const BucketListPage: React.FC = () => {
                   await unlinkExpenseMutation.mutateAsync(expenseId);
                 }}
                 onExecute={plan => setExecutingPlan(plan)}
-                onUnexecute={planId => {
-                  unexecuteBucketPlan(planId);
-                  invalidate();
-                }}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* Plan Modal */}
+      {/* Plan Modal (Form state resets properly on close/open) */}
       <BucketPlanModal
         isOpen={isPlanModalOpen}
         onClose={() => {
@@ -226,16 +236,17 @@ export const BucketListPage: React.FC = () => {
           setEditingPlan(null);
         }}
         initialData={editingPlan}
-        onSubmit={async data => {
+        onSubmit={async (data: BucketPlanFormData) => {
           if (editingPlan) {
             await updatePlanMutation.mutateAsync({ id: editingPlan.id, data });
+            toast.success('Bucket plan updated successfully.');
           } else {
             await createPlanMutation.mutateAsync(data);
           }
         }}
       />
 
-      {/* Direct Expense Modal for Bucket Plan */}
+      {/* Direct Expense Modal for Bucket Plan (No accounts required) */}
       <BucketExpenseModal
         isOpen={Boolean(expensePlan)}
         onClose={() => {
@@ -243,7 +254,6 @@ export const BucketListPage: React.FC = () => {
           setEditingExpense(null);
         }}
         plan={expensePlan}
-        accounts={accountsData?.accounts || []}
         categories={categoriesData?.categories || []}
         initialExpense={editingExpense}
         onSubmit={async (data: BucketExpenseFormData, expenseId?: string) => {
@@ -255,7 +265,6 @@ export const BucketListPage: React.FC = () => {
                 amount: data.amount,
                 date: data.date,
                 categoryId: data.categoryId,
-                accountId: data.accountId,
               },
             });
           } else if (expensePlan) {
@@ -283,20 +292,18 @@ export const BucketListPage: React.FC = () => {
         }}
       />
 
-      {/* Execute Plan Confirmation */}
+      {/* Mandatory Execution Warning Modal */}
       <ConfirmDialog
         isOpen={Boolean(executingPlan)}
         onClose={() => setExecutingPlan(null)}
-        title={`Finalize & Execute Plan — ${executingPlan?.name}?`}
-        message={`Do you want to finalize this plan and deduct ₹${(
-          executingPlan
-            ? (executingPlan.totalSpent > 0 ? executingPlan.totalSpent : executingPlan.budget)
-            : 0
-        ).toLocaleString()} from your Overall Savings? This transaction will also be recorded in your Monthly Tracker and Reports.`}
-        confirmText="Confirm & Deduct from Savings"
-        variant="primary"
+        title={`Execute Plan — ${executingPlan?.name}`}
+        message="Warning: This action is irreversible. Once executed, money will be permanently deducted from your overall savings. Are you sure you want to proceed?"
+        confirmText="Confirm & Permanently Deduct from Savings"
+        variant="destructive"
         onConfirm={async () => {
           if (executingPlan) {
+            const deductionAmount =
+              executingPlan.totalSpent > 0 ? executingPlan.totalSpent : executingPlan.budget;
             executeBucketPlan(executingPlan);
             try {
               await updatePlanMutation.mutateAsync({
@@ -307,6 +314,9 @@ export const BucketListPage: React.FC = () => {
               console.error('Failed to update status on server:', err);
             }
             invalidate();
+            toast.success(
+              `Plan "${executingPlan.name}" executed successfully! ₹${deductionAmount.toLocaleString()} deducted from Overall Savings.`
+            );
             setExecutingPlan(null);
           }
         }}
@@ -317,7 +327,7 @@ export const BucketListPage: React.FC = () => {
         isOpen={Boolean(deletingExpenseId)}
         onClose={() => setDeletingExpenseId(null)}
         title="Delete Expense Transaction?"
-        message="This will permanently delete the expense transaction, restoring the deducted amount to your account balance and monthly tracker."
+        message="This will permanently delete the expense transaction, restoring the deducted amount to your plan budget."
         confirmText="Delete Expense"
         variant="destructive"
         onConfirm={async () => {
@@ -330,4 +340,3 @@ export const BucketListPage: React.FC = () => {
     </div>
   );
 };
-

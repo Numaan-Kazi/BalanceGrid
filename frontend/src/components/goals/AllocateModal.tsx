@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal } from '../ui/Modal';
@@ -119,6 +120,7 @@ export const AllocateModal: React.FC<AllocateModalProps> = ({
         notes: notes.trim() || undefined,
       });
 
+      toast.success(`Successfully allocated ₹${numAmount.toFixed(2)} to ${selectedGoal?.name}!`);
       setSuccessMessage(`Successfully allocated ₹${numAmount.toFixed(2)} to ${selectedGoal?.name}!`);
       setTimeout(() => {
         onClose();

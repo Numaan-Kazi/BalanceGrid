@@ -21,6 +21,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.51.5",
     "react-router-dom": "^6.23.1",
+    "sonner": "^2.0.8",
     "tailwind-merge": "^2.3.0",
     "zod": "^3.23.8"
   },

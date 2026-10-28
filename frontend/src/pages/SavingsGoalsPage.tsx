@@ -1,8 +1,9 @@
+import { toast } from 'sonner';
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { PiggyBank, Plus, Loader2 } from "lucide-react";
-import { MonthlyTrackerResponse, SavingsGoal } from "@/types";
+import { SavingsGoal } from "@/types";
 import { api } from "@/lib/api";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button } from "@/components/ui/Button";
@@ -23,18 +24,9 @@ export const SavingsGoalsPage: React.FC = () => {
     useState<string | undefined>(undefined);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
 
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-
   const { data: goalsData, isLoading } = useQuery<{ goals: SavingsGoal[] }>({
     queryKey: ["goals"],
     queryFn: () => api.get("/goals"),
-  });
-
-  const { data: trackerData } = useQuery<MonthlyTrackerResponse>({
-    queryKey: ["monthlyTracker", currentYear, currentMonth],
-    queryFn: () =>
-      api.get(`/monthly?year=${currentYear}&month=${currentMonth}`),
   });
 
   const invalidate = () => {
@@ -46,27 +38,36 @@ export const SavingsGoalsPage: React.FC = () => {
 
   const createGoalMutation = useMutation({
     mutationFn: (newGoal: any) => api.post("/goals", newGoal),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success("Savings goal created successfully.");
+    },
   });
 
   const updateGoalMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       api.patch(`/goals/${id}`, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success("Savings goal updated successfully.");
+    },
   });
 
   const deleteGoalMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/goals/${id}`),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success("Savings goal deleted successfully.");
+    },
   });
 
   const allocateMutation = useMutation({
     mutationFn: (data: any) =>
-      api.post("/goals/allocate", {
-        ...data,
-        monthlyPeriodId: trackerData?.period?.id,
-      }),
-    onSuccess: invalidate,
+      api.post("/goals/allocate", data),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Savings allocated to goal successfully.");
+    },
   });
 
   const goals = goalsData?.goals || [];

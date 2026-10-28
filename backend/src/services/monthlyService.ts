@@ -362,6 +362,25 @@ export const closeMonthlyPeriod = async (
   });
 };
 
+export const unlockMonthlyPeriod = async (
+  userId: string,
+  periodId: string
+) => {
+  const period = await prisma.monthlyPeriod.findFirst({
+    where: { id: periodId, userId },
+  });
+  if (!period) throw new AppError('Monthly period not found', 404);
+
+  return prisma.monthlyPeriod.update({
+    where: { id: periodId },
+    data: {
+      isClosed: false,
+      closedAt: null,
+      finalizedSavings: null,
+    },
+  });
+};
+
 export const updateMonthlyBudgetAndNotes = async (
   userId: string,
   monthlyPeriodId: string,

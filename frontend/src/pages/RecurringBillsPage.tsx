@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -40,24 +41,36 @@ export const RecurringBillsPage: React.FC = () => {
 
   const createBillMutation = useMutation({
     mutationFn: (newBill: any) => api.post('/recurring-bills', newBill),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Recurring bill created successfully');
+    },
   });
 
   const updateBillMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       api.patch(`/recurring-bills/${id}`, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Recurring bill updated successfully');
+    },
   });
 
   const payBillMutation = useMutation({
     mutationFn: ({ billId, data }: { billId: string; data: any }) =>
       api.post(`/recurring-bills/${billId}/pay`, data),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Bill marked as paid');
+    },
   });
 
   const deleteBillMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/recurring-bills/${id}`),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success('Recurring bill deleted successfully');
+    },
   });
 
   const bills = billsData?.bills || [];

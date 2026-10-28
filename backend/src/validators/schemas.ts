@@ -157,7 +157,7 @@ export const linkExpenseToPlanSchema = z.object({
 
 export const createBucketExpenseSchema = z.object({
   bucketPlanId: z.string().uuid('Bucket plan ID is required'),
-  accountId: z.string().uuid('Payment account is required'),
+  accountId: z.string().uuid().optional(),
   categoryId: z.string().uuid('Category is required'),
   amount: z.number().positive('Amount must be positive'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Valid date is required (YYYY-MM-DD)'),

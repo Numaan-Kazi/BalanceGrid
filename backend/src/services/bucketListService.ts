@@ -227,7 +227,7 @@ export const addExpenseToBucketPlan = async (
   userId: string,
   data: {
     bucketPlanId: string;
-    accountId: string;
+    accountId?: string;
     categoryId: string;
     amount: number;
     date: string;
@@ -242,8 +242,28 @@ export const addExpenseToBucketPlan = async (
     throw new AppError('Bucket plan not found or access denied', 404);
   }
 
+  let accountId = data.accountId;
+  if (!accountId) {
+    const userAccount = await prisma.account.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (userAccount) {
+      accountId = userAccount.id;
+    } else {
+      const newAcc = await prisma.account.create({
+        data: {
+          userId,
+          name: 'General',
+          type: 'OTHER',
+                  },
+      });
+      accountId = newAcc.id;
+    }
+  }
+
   return createDetailedExpense(userId, {
-    accountId: data.accountId,
+    accountId,
     categoryId: data.categoryId,
     amount: data.amount,
     date: data.date,

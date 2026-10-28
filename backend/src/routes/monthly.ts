@@ -14,6 +14,7 @@ import {
   setCategoryBudget,
   setMonthlyStartingBalance,
   closeMonthlyPeriod,
+  unlockMonthlyPeriod,
 } from '../services/monthlyService';
 
 const router = Router();
@@ -59,6 +60,19 @@ router.post('/close/:periodId', validateBody(closeMonthSchema), async (req: Requ
   }
 });
 
+// Unlock monthly period
+router.post('/unlock/:periodId', async (req: Request, res: Response, next) => {
+  try {
+    const updated = await unlockMonthlyPeriod(
+      req.user!.id,
+      req.params.periodId
+    );
+    res.json({ period: updated, message: 'Month unlocked successfully.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update overall monthly budget and notes
 router.patch('/budget/:periodId', validateBody(updateMonthlyPeriodBudgetSchema), async (req: Request, res: Response, next) => {
   try {
@@ -80,4 +94,3 @@ router.post('/category-budget', validateBody(setCategoryBudgetSchema), async (re
 });
 
 export default router;
-
