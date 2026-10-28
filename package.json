@@ -1,0 +1,19 @@
+{
+  "name": "balance-grid",
+  "version": "1.0.0",
+  "description": "Personal Finance Tracker - Production-quality full-stack application",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint"
+  },
+  "keywords": ["finance", "tracker", "budget", "weekly-expenses", "savings", "typescript", "react"],
+  "author": "Antigravity",
+  "license": "MIT"
+}
+
